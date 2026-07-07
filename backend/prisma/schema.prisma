@@ -1,0 +1,144 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String        @id @default(uuid())
+  name         String
+  email        String        @unique
+  passwordHash String        @map("password_hash")
+  role         Role          @default(LEARNER)
+  createdAt    DateTime      @default(now()) @map("created_at")
+  enrollments  Enrollment[]
+  progress     Progress[]
+  certificates Certificate[]
+
+  @@map("users")
+}
+
+model Course {
+  id           String        @id @default(uuid())
+  title        String
+  description  String
+  category     String
+  level        Level         @default(BEGINNER)
+  thumbnailUrl String?       @map("thumbnail_url")
+  isFree       Boolean       @default(true) @map("is_free")
+  price        Float?
+  published    Boolean       @default(false)
+  createdAt    DateTime      @default(now()) @map("created_at")
+  modules      Module[]
+  enrollments  Enrollment[]
+  certificates Certificate[]
+  accessCodes  AccessCode[]
+
+  @@map("courses")
+}
+
+model Module {
+  id         String   @id @default(uuid())
+  courseId   String   @map("course_id")
+  title      String
+  orderIndex Int      @map("order_index")
+  course     Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons    Lesson[]
+
+  @@map("modules")
+}
+
+model Lesson {
+  id           String     @id @default(uuid())
+  moduleId     String     @map("module_id")
+  title        String
+  type         LessonType
+  contentUrl   String?    @map("content_url")
+  orderIndex   Int        @map("order_index")
+  durationMins Int?       @map("duration_mins")
+  module       Module     @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  progress     Progress[]
+
+  @@map("lessons")
+}
+
+model Enrollment {
+  id          String    @id @default(uuid())
+  userId      String    @map("user_id")
+  courseId    String    @map("course_id")
+  enrolledAt  DateTime  @default(now()) @map("enrolled_at")
+  completedAt DateTime? @map("completed_at")
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course      Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@map("enrollments")
+}
+
+model Progress {
+  id          String    @id @default(uuid())
+  userId      String    @map("user_id")
+  lessonId    String    @map("lesson_id")
+  completed   Boolean   @default(false)
+  completedAt DateTime? @map("completed_at")
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson      Lesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+  @@map("progress")
+}
+
+model Certificate {
+  id             String   @id @default(uuid())
+  userId         String   @map("user_id")
+  courseId       String   @map("course_id")
+  issuedAt       DateTime @default(now()) @map("issued_at")
+  certificateUid String   @unique @map("certificate_uid")
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course         Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@map("certificates")
+}
+
+model Resource {
+  id         String   @id @default(uuid())
+  title      String
+  category   String
+  fileUrl    String   @map("file_url")
+  fileType   String   @map("file_type")
+  uploadedAt DateTime @default(now()) @map("uploaded_at")
+
+  @@map("resources")
+}
+
+model AccessCode {
+  id        String    @id @default(uuid())
+  code      String    @unique
+  courseId  String    @map("course_id")
+  maxUses   Int       @map("max_uses")
+  usedCount Int       @default(0) @map("used_count")
+  expiresAt DateTime? @map("expires_at")
+  course    Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@map("access_codes")
+}
+
+enum Role {
+  LEARNER
+  ADMIN
+}
+
+enum Level {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum LessonType {
+  VIDEO
+  TEXT
+  QUIZ
+}
