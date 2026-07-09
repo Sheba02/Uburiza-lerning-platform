@@ -2,6 +2,8 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
+import swaggerUi from "swagger-ui-express";
+import { swaggerSpec } from "./config/swagger";
 
 import authRoutes from "./routes/auth.routes";
 import courseRoutes from "./routes/course.routes";
@@ -25,6 +27,9 @@ app.use("/api", progressRoutes);
 app.use("/api", certificateRoutes);
 app.use("/api/resources", resourceRoutes);
 app.use("/api/admin", adminRoutes);
+
+app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.get("/api/docs.json", (_req, res) => res.json(swaggerSpec));
 
 app.get("/health", (_req, res) => res.json({ status: "ok" }));
 
